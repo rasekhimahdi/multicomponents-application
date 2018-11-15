@@ -1,0 +1,161 @@
+###Application Section
+######################
+######################Goodness of fit test of data for GL distribution
+GLOd<-function(x,alpha,lambda){
+ G<-rep(0,0)
+ for(i in 1:length(x)){
+    G[i]<-alpha*lambda*exp(-lambda*x[i])*(1+exp(-lambda*x[i]))^(-alpha-1)
+ }
+return(G)
+}
+######Other model Comparison
+library("AdequacyModel")
+x<-c(1.901,2.132,2.203,2.228,2.257,2.350,2.361,2.396,
+2.397,2.445,2.454,2.474,2.518,2.522,2.525,2.532,2.575,
+2.614,2.616,2.618,2.624,2.659,2.675,2.738,2.740,2.856,
+2.917,2.928,2.937,2.937,2.977,2.996,3.030,3.125,3.139,
+3.145,3.220,3.223,3.235,3.243,3.264,3.272,3.294,3.332,
+3.346,3.377,3.408,3.435,3.493,3.501,3.537,3.554,3.562,
+3.628,3.852,3.871,3.886,3.971,4.024,4.027,4.225,4.395,5.020)
+x<-(x-mean(x))/sd(x)
+######
+hist(x,prob=T,breaks=10,main="",ylim=c(0,1))
+y<-seq(-5,5,.01)
+#####OLLGG
+cdf_GLO<-function(par,x){
+alpha=par[1]
+lambda=par[2]
+  CDF=(1+exp(-lambda*x))^(-alpha)
+  PDF=alpha*lambda*exp(-lambda*x)*(1+exp(-lambda*x))^(-alpha-1)
+return(CDF)
+  }
+pdf_GLO<-function(par,x){
+alpha=par[1]
+lambda=par[2]
+  CDF=(1+exp(-lambda*x))^(-alpha)
+  PDF=alpha*lambda*exp(-lambda*x)*(1+exp(-lambda*x))^(-alpha-1)
+return(PDF)
+}
+GLO<-goodness.fit(pdf=pdf_GLO, cdf=cdf_GLO, 
+             starts = c(1,1), data = x,
+             method="N", domain=c(0.1,Inf),mle=NULL)
+lines(y,GLOd(y,GLO$mle[1],GLO$mle[2]),lwd=2,lty=1,col="black")
+###########################
+library("AdequacyModel")
+x<-c(1.312,1.314,1.479,1.552,1.700,1.803,1.861,1.865,1.944,
+1.958,1.966,1.997,2.006,2.021,2.027,2.055,2.063,2.098,2.140,
+2.179,2.224,2.240,2.253,2.270,2.272,2.274,2.301,2.301,2.359,
+2.382,2.382,2.426,2.434,2.435,2.478,2.490,2.511,2.514,2.535,
+2.554,2.566,2.570,2.586,2.629,2.633,2.642,2.648,2.684,2.697,
+2.726,2.770,2.773,2.800,2.809,2.818,2.821,2.848,2.880,2.954,
+3.012,3.067,3.084,3.090,3.096,3.128,3.233,3.433,3.585,3.585)
+x<-(x-mean(x))/sd(x)
+######
+hist(x,prob=T,breaks=10,main="",ylim=c(0,1))
+y<-seq(-5,5,.01)
+#####OLLGG
+cdf_GLO<-function(par,x){
+alpha=par[1]
+lambda=par[2]
+  CDF=(1+exp(-lambda*x))^(-alpha)
+  PDF=alpha*lambda*exp(-lambda*x)*(1+exp(-lambda*x))^(-alpha-1)
+return(CDF)
+  }
+
+pdf_GLO<-function(par,x){
+alpha=par[1]
+lambda=par[2]
+  CDF=(1+exp(-lambda*x))^(-alpha)
+  PDF=alpha*lambda*exp(-lambda*x)*(1+exp(-lambda*x))^(-alpha-1)
+return(PDF)
+}
+GLO<-goodness.fit(pdf=pdf_GLO, cdf=cdf_GLO, 
+             starts = c(1,1), data = x,
+             method="N", domain=c(0.1,Inf),mle=NULL)
+lines(y,GLOd(y,GLO$mle[1],GLO$mle[2]),lwd=2,lty=1,col="black")
+########################################################################
+
+##Generalized Logistic Multicomponents stress strengh
+
+######################Classical method
+MLERsk<-function(x,y){
+G<-rep(0,0)
+n<-length(x)
+m<-length(y) 
+likelihood<-function(par){
+a1<-par[1]
+a2<-par[2]
+lambda<-par[3]
+n<-length(x)
+m<-length(y)    
+    G<- -((n*log(a1))+(m*log(a2))+((n+m)*log(lambda))-(lambda*(sum(x)+sum(y)))
+-(a1+1)*sum(log(1+exp(-lambda*x)))-(a2+1)*sum(log(1+exp(-lambda*y))))
+return(G)
+}
+MLESTIM <- optim(c(alpha1,alpha2,lambdastar),likelihood,hessian=T,method="L-BFGS-B"
+,lower = c(.1,.1,.1),upper =c(Inf,Inf,Inf))
+a1<-MLESTIM$par[1]
+a2<-MLESTIM$par[2]
+lambda<-MLESTIM$par[3]
+#####EStimate R12 and R23
+G[1]<-(2*a1*a2)/(a2*(a2+(2*a1)))
+G[2]<-(6*a1^2)/((a2+3*a1)*(a2+2*a1))
+#####EStimate variance of R12 and R23
+J<-matrix(c(0),nrow=3,ncol=3,byrow=T)
+J[1,1]<-(n/(a1^2))
+J[2,2]<-(m/(a2^2))
+J[1,3]<--n*((psigamma(a1, deriv = 0)-psigamma(1, deriv = 0)-1)/(lambda*(a1+1)))
+J[3,1]<-J[1,3]
+J[2,3]<--m*((psigamma(a2, deriv = 0)-psigamma(1, deriv = 0)-1)/(lambda*(a2+1)))
+J[3,2]<-J[2,3]
+J[3,3]<-((n+m)/(lambda^2))+((n/((lambda^2)*(a1+2)))*((a1*(psigamma(a1, deriv = 1)
++(psigamma(a1, deriv = 0)^2)+(psigamma(1, deriv = 0)^2)+((pi^2)/6)))
++(2*(1-(a1*(psigamma(1, deriv = 0)+1)))*(psigamma(a1, deriv = 0)-1))))+
+((m/((lambda^2)*(a2+2)))*((a2*(psigamma(a2, deriv = 1)+(psigamma(a2, deriv = 0)^2)+
+(psigamma(1, deriv = 0)^2)+((pi^2)/6)))
++(2*(1-(a2*(psigamma(1, deriv = 0)+1)))*(psigamma(a2, deriv = 0)-1))))
+u<-(J[1,1]*J[2,2]*J[3,3])-(J[1,1]*(J[2,3]^2))-(J[2,2]*(J[1,3]^2))
+G[3]<-((4*a1^2)/(u*(a2+(2*a1))^4))*((((a2/a1)^2)*(J[2,2]*J[3,3]-(J[2,3])^2))-
+((a2/a1)*J[1,3]*J[2,3])+(J[1,1]*J[3,3])-((J[1,3])^2))
+G[4]<-((36*(a1^4)*((2*a2+5*a1)^2))/(u*((a2+3*a1)^4)*((a2+2*a1)^4)))*
+((((a2/a1)^2)*(J[2,2]*J[3,3]-(J[2,3])^2))-((a2/a1)*J[1,3]*J[2,3])+(J[1,1]*J[3,3])
+-((J[1,3])^2))
+return(G)
+}
+###############################################
+###importing data set
+x<-c(1.901,2.132,2.203,2.228,2.257,2.350,2.361,2.396,2.397,2.445,2.454,2.474,2.518,
+2.522,2.525,2.532,2.575,2.614,2.616,2.618,2.624,2.659,2.675,2.738,2.740,2.856,2.917,
+2.928,2.937,2.937,2.977,2.996,3.030,3.125,3.139,3.145,3.220,3.223,3.235,3.243,3.264,
+3.272,3.294,3.332,3.346,3.377,3.408,3.435,3.493,3.501,3.537,3.554,3.562,3.628,3.852,
+3.871,3.886,3.971,4.024,4.027,4.225,4.395,5.020)
+x<-(x-mean(x))/sd(x)
+
+y<-c(1.312,1.314,1.479,1.552,1.700,1.803,1.861,1.865,1.944,1.958,1.966,1.997,2.006,
+2.021,2.027,2.055,2.063,2.098,2.140,2.179,2.224,2.240,2.253,2.270,2.272,2.274,2.301,
+2.301,2.359,2.382,2.382,2.426,2.434,2.435,2.478,2.490,2.511,2.514,2.535,2.554,2.566,
+2.570,2.586,2.629,2.633,2.642,2.648,2.684,2.697,2.726,2.770,2.773,2.800,2.809,2.818,
+2.821,2.848,2.880,2.954,3.012,3.067,3.084,3.090,3.096,3.128,3.233,3.433,3.585,3.585)
+y<-(y-mean(y))/sd(y)
+####initial value for optimization
+alpha1<-2
+alpha2<-2
+lambdastar<-1.7
+#####MLE and Variance of R12 and R23
+MLERsk(x,y)
+####################################
+#####Final result of Classical Approach
+
+#####MLE R12 and R23 with sd and confidence interval
+MLERsk(x,y)[1]
+sqrt(MLERsk(x,y))[3]
+c((MLERsk(x,y)[1]-1.959964*sqrt(MLERsk(x,y)[3])) , MLERsk(x,y)[1]+1.959964*sqrt(MLERsk(x,y)[3]))
+
+MLERsk(x,y)[2]
+sqrt(MLERsk(x,y)[4])
+c((MLERsk(x,y)[2]-1.959964*sqrt(MLERsk(x,y)[4])) , MLERsk(x,y)[2]+1.959964*sqrt(MLERsk(x,y)[4]))
+###########################################################
+#Bayesian method
+
+
+

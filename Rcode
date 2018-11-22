@@ -156,6 +156,126 @@ sqrt(MLERsk(x,y)[4])
 c((MLERsk(x,y)[2]-1.959964*sqrt(MLERsk(x,y)[4])) , MLERsk(x,y)[2]+1.959964*sqrt(MLERsk(x,y)[4]))
 ###########################################################
 #Bayesian method
+rm(list=ls())
 
+Inserting data
+repeatn<-100
+alfa10<-1.8 ; landa10<-2.5 ; alfa20<-2 ; landa20<-2.5
+nsamplex<-5 ; nsampley<-5
+a10<-3 ; a20<-5 ;a30<-1 ;a40<-2 ; b10<-3 ; b20<-3 ;b30<-6 ; b40<-1
+sigma2<-.25
+seed<-24000
+nmh0<-1 ; ngs<-5000
+alfa1s<-2.1 ; landa1s<-2.9 ; alfa2s<-1.15 ; landa2s<-2.9
+
+Starting values
+Programms
+dlogis<-function(x,alfa,landa) alfalandaexp(-landax) ( (1+exp(-landa*x))^(-(alfa+1)) )
+
+rlogis<-function(n,alfa,landa) { # tolid n ta az tozie logistic
+u<-runif(n)
+x<--(1/landa)*log(u^(-1/alfa)-1)
+return(x) }
+
+sxl<-function(x,l) sum(log(1+exp(-l*x)))
+
+flanda<-function(x,l,a,b,alfa){
+n<-length(x)
+d1<-l^(n+a-1)
+d2<- -l*(b+sum(x))-(alfa+1)sxl(x,l)
+d3<-d1exp(d2)
+return(d3) }
+ralfa<-function(l,x,a,b){ # generate from conditional distribution alphas
+n<-length(x)
+d1<-n+a
+d2<-b+sxl(x,l)
+d3<-rgamma(1,d1,d2)
+return(d3) }
+
+#fab(2,1:6,4,.1)
+
+mh<-function(nmh,landas,x,a,b,alfa){
+set.seed<-seed
+sample<-rep(0,nmh)
+for(i in 1:nmh){
+landa<-rnorm(1,landas,sigma2)
+a.p1<-flanda(x,landa,a,b,alfa)
+a.p2<-flanda(x,landas,a,b,alfa)
+a.p3<-dnorm(landas,landa,sigma2)
+a.p4<-dnorm(landa,landas,sigma2)
+accept.prob<-(a.p1/a.p2)*(a.p3/a.p4)
+ratio<-min(1,accept.prob)
+u<-runif(1)
+if(u<=ratio) sample[i]<-landa
+else sample[i]<-landas
+landas<-sample[i] }
+return(mean(sample)) }
+
+#observation<-rlogis(100,2,3)
+#mh(10000,5,observation,2,3,alfa10)
+
+GS<-function(N.GS,N.MH,landa1s,landa2s,x,y){
+n<-length(x) ; m<-length(y)
+alfa1<-alfa2<-landa1<-landa2<-rep(0,N.GS)
+for(i in 1:N.GS){
+alfa1[i]<-ralfa(landa1s,x,a10,b10)
+alfa2[i]<-ralfa(landa2s,x,a20,b20)
+landa1[i]<-mh(N.MH,landa1s,x,a30,b30,alfa1[i])
+landa2[i]<-mh(N.MH,landa2s,x,a40,b40,alfa2[i])
+landa1s<-landa1[i]
+landa2s<-landa2[i] }
+return(colMeans(cbind(alfa1,alfa2,landa1,landa2)[-(1:round(N.GS/4)),]))
+}
+n<-nsamplex
+m<-nsampley
+
+R12<-function(a1,a2){
+G<-(2a1a2)/(a2*(a2+(2*a1)))
+return(G) }
+
+R23<-function(a1,a2){
+G<-(6a1^2)/((a2+3a1)(a2+2a1))
+return(G)}
+
+R120<-R12(alfa10,alfa20)
+R230<-R23(alfa10,alfa20)
+
+N<-5000
+R12ha<-rep(0,0)
+bias12<-rep(0,0)
+MSE12<-rep(0,0)
+L12<-c(0,0)
+CP12<-rep(0,0)
+R23ha<-rep(0,0)
+bias23<-rep(0,0)
+MSE23<-rep(0,0)
+L23<-c(0,0)
+CP23<-rep(0,0)
+
+for(j in 1:repeatn){
+for(i in 1:N) {
+
+observationx<-rlogis(nsamplex,alfa10,landa10)
+observationy<-rlogis(nsampley,alfa20,landa20)
+parameterestim<-GS(ngs,nmh0,landa1s,landa2s,observationx,observationy)
+
+alfa1hat<-parameterestim[1]
+alfa2hat<-parameterestim[2]
+landa1hat<-parameterestim[3]
+landa2hat<-parameterestim[4]
+
+R12ha[i]<-R12(alfa1hat,alfa2hat)}
+
+R12hat<-mean(R12ha)
+bias12[j]<-R12hat-R120
+MSE12[j]<-mean(R12ha-R120)^2
+var12<-var(R12ha)
+L12[j]<-21.96sqrt(var12)
+CP12[j]<-sum((R120>=(R12hat-1.959sqrt(var12))) & (R120<=(R12hat+1.959sqrt(var12))))}
+
+mean(bias12)
+mean(MSE12)
+mean(L12)
+mean(CP12)
 
 
